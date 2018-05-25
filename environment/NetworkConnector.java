@@ -5,17 +5,16 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.Scanner;
 
 /**
- * NetworkConnecter
+ * NetworkConnector
  * Simple connector to python environment to exchange information
  * How it works:
  * python has network to output the action given current state (and hidden state from previous via DLSTM)
  * java has environment for wumpus world
  * use this class to send (s_t,r_t,t_t) to python and receive (a_t) in back
  */
-public class NetworkConnecter{
+public class NetworkConnector{
     static final private int itemSize = 4;
     
     private int _port;
@@ -28,26 +27,7 @@ public class NetworkConnecter{
     private InputStream inStream;
     private OutputStream outStream;
 
-    public static void main(String[] args) {
-        try{
-            NetworkConnecter nc = new NetworkConnecter(2727);
-            Scanner scanner = new Scanner(System.in);
-            while(true){
-                int state, reward, action;
-                boolean terminal;
-                state = scanner.nextInt();
-                reward = scanner.nextInt();
-                terminal = scanner.nextBoolean();
-                action = nc.getAction(state, reward, terminal);
-                System.out.println("Received action = " + action);
-            }
-        }catch(Exception e){
-            e.printStackTrace();
-            System.exit(1);
-        }
-    }
-
-    public NetworkConnecter(int port){
+    public NetworkConnector(int port){
         this._port = port;
         this._SRTBuffer = ByteBuffer.allocate(3 * itemSize);
         this._SRTBuffer.order(ByteOrder.LITTLE_ENDIAN);
