@@ -4,7 +4,7 @@ import numpy as np
 class simpleServer:
     def __init__(self, port):
         self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        self.socket.bind((socket.gethostname(), port))
+        self.socket.bind(("localhost", port))
         self.socket.listen(1)
 
     def accept(self):
@@ -12,14 +12,14 @@ class simpleServer:
         self.client = c
 
 
-    def sendsa(self, sa):
+    def send_action(self, action):
         '''
 
-        Sends 16 bytes to client (binary representation of state and action)<p>
-        @param sa {tuple} (state, action) as in MPD definition<br>
+        Sends 8 bytes to client (binary representation of state and action)<p>
+        @param action {int} as in MPD definition<br>
 
         '''
-        data = np.array(sa, dtype=np.int64).tobytes()
+        data = np.array(action, dtype=np.int32).tobytes()
         self.client.send(data)
 
 
@@ -30,8 +30,8 @@ class simpleServer:
         @return tuple (new state, reward, terminal state)
 
         '''
-        data = self.client.recv(24)
-        return tuple(np.fromstring(data, dtype=np.int64))
+        data = self.client.recv(12)
+        return tuple(np.fromstring(data, dtype=np.int32).astype(np.int64))
 
     def close(self):
         self.client.close()
