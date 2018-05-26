@@ -2,38 +2,40 @@ import socket
 import numpy as np
 
 class simpleServer:
-    def __init__(self, port):
-        self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        self.socket.bind(("localhost", port))
-        self.socket.listen(1)
+    def __init__(self, port, num_games=1):
+        self._socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
+        self._socket.bind(("localhost", port))
+        self._socket.listen(1)
+        self._games = num_games
 
     def accept(self):
-        c, _ = self.socket.accept()
-        self.client = c
+        c, _ = self._socket.accept()
+        self._client = c
 
 
     def send_action(self, action):
         '''
 
-        Sends 8 bytes to client (binary representation of state and action)<p>
-        @param action {int} as in MPD definition<br>
+        Sends 4 * number of games bytes to client (binary representation of state and action)<p>
+        @param action {np.array, shape=(num_games)} as in MPD definition<br>
 
         '''
         data = np.array(action, dtype=np.int32).tobytes()
-        self.client.send(data)
+        self._client.send(data)
 
 
     def recvsrt(self):
         '''
 
-        Waits untill client send 24 bytes of binary representation of tuple (state, reward, terminal_state)<p>
-        @return tuple (new state, reward, terminal state)
+        Waits untill client send 12 * number of games bytes of binary representation of tuple (state, reward, terminal_state)<p>
+        @return np.array({new state, reward, terminal state}), shape=(num_games, 3)
 
         '''
-        data = self.client.recv(12)
-        return tuple(np.fromstring(data, dtype=np.int32).astype(np.int64))
-
+        data = self._client.recv(12 * self._games)
+        return np.fromstring(data, dtype=np.int32).reshape(-1, 3)
+        
+    
     def close(self):
-        self.client.close()
-        self.socket.close()
+        self._client.close()
+        self._socket.close()
 

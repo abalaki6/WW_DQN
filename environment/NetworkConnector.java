@@ -5,6 +5,7 @@ import java.io.OutputStream;
 import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.IntBuffer;
 
 /**
  * NetworkConnector
@@ -13,61 +14,91 @@ import java.nio.ByteOrder;
  * python has network to output the action given current state (and hidden state from previous via DLSTM)
  * java has environment for wumpus world
  * use this class to send (s_t,r_t,t_t) to python and receive (a_t) in back
+ * @author Artsiom Balakir
+ * @since 05/25/2018
  */
 public class NetworkConnector{
     static final private int itemSize = 4;
     
-    private int _port;
-    private ByteBuffer _SRTBuffer;
-    private ByteBuffer _ABuffer;
-    private int[] _buffer;
-    private byte[] _bBuffer;
+    private ByteBuffer SRTBuffer;      // buffer to store set of (s_it, r_it, t_it)
+    private ByteBuffer ABuffer;        // buffer to store set of (a_it)
+    private IntBuffer SRTIntBuffer;    // wrapper for SRTBuffer to work with int
+    private byte[] byteBuffer;         // buffer to receive data
+    
+    private Socket socket;             // communication socket
+    private InputStream inStream;      // input stream from socket
+    private OutputStream outStream;    // output stream from socket
+    
+    private int simulators;            // number of parallel simulators
+    
 
-    private Socket socket;
-    private InputStream inStream;
-    private OutputStream outStream;
-
-    public NetworkConnector(int port){
-        this._port = port;
-        this._SRTBuffer = ByteBuffer.allocate(3 * itemSize);
-        this._SRTBuffer.order(ByteOrder.LITTLE_ENDIAN);
-        this._ABuffer = ByteBuffer.allocate(1 * itemSize);
-        this._buffer = new int[3];
-        this._bBuffer = new byte[itemSize];
+    /**
+     * Creates all buffers for interal communication
+     * @param port: port to connect 
+     * @param number_parallel_simulators: how many parallel runs network has to expect
+     */
+    public NetworkConnector(int port, int number_parallel_simulators){
+        this.simulators = number_parallel_simulators;
+        
+        this.SRTBuffer = ByteBuffer.allocate(3 * itemSize * this.simulators);
+        this.SRTBuffer.order(ByteOrder.LITTLE_ENDIAN);
+        
+        this.byteBuffer = new byte[itemSize * this.simulators];
 
         try{
-            socket = new Socket("localhost", this._port);
+            socket = new Socket("localhost", port);
             inStream = new BufferedInputStream(socket.getInputStream());
             outStream = new BufferedOutputStream(socket.getOutputStream());
         }catch(Exception e){
             e.printStackTrace();
             System.exit(1);
         }
+
+        this.clean();
     }
 
-    public int getAction(int state, int reward, boolean terminal){
+    /**
+     * Update tuple (s, r, t) for specified simulator
+     * @param state: new state of the simulator
+     * @param reward: reward for previous action
+     * @param terminal: is the state terminal
+     * @param simulator_id: id of the simulator to update information
+     */
+    public void setSRT(int state, int reward, boolean terminal, int simulator_id){
+        this.SRTIntBuffer.put(simulator_id * 3, state).
+            put(simulator_id * 3 + 1, reward).
+            put(simulator_id * 3 + 2, (terminal ? 1 : 0));
+    }
+
+    /**
+     * Block untill other side of simulator runs the model and return calculated actions
+     * @param buffer: pre-allocated buffer for actions
+     * @return int[]: array of actions
+     */
+    public int[] getActions(int[] buffer){
         try{
-            this.outStream.write(this.pack(state, reward, terminal));
+            // send collected information from each simulator
+            this.outStream.write(this.SRTBuffer.array());
             this.outStream.flush();
+            // wait untill model computes the corresponding actions, read them
+            this.inStream.read(this.byteBuffer);
+            // get bytes, parse and convert to int
+            IntBuffer ABuffer = ByteBuffer.wrap(this.byteBuffer).
+                order(ByteOrder.LITTLE_ENDIAN).
+                asIntBuffer().
+                get(buffer);
     
-            this.inStream.read(this._bBuffer);
-            this._ABuffer = ByteBuffer.wrap(this._bBuffer);
-            this._ABuffer.order(ByteOrder.LITTLE_ENDIAN);
         }catch(Exception e){
             e.printStackTrace();
             System.exit(1);
         }
-        return this._ABuffer.getInt();
+        this.clean();
+        return buffer;
     } 
-
-    private byte[] pack(int state, int reward, boolean terminal){
-        this._buffer[0] = state;
-        this._buffer[1] = reward;
-        this._buffer[2] = terminal ? 1 : 0;
-        this._SRTBuffer.asIntBuffer().put(this._buffer, 0, 3);
-        return this._SRTBuffer.array();
-    }
-
+    
+    /**
+     * Closes connection to server, cleans up streams
+     */
     public void close(){
         try{
             this.inStream.close();
@@ -79,4 +110,10 @@ public class NetworkConnector{
         }
     }
     
+    /**
+     * Cleans up buffer for being reusable
+     */
+    private void clean(){
+        this.SRTIntBuffer = this.SRTBuffer.asIntBuffer();
+    }
 }
