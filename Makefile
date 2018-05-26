@@ -1,8 +1,9 @@
 all: world
 
-JAVAPATH = environment/wumpuslite/WumpusWorld/src/main/java/wumpusworld/
-COMMITPATH = environment/
 DIR = $(shell pwd)
+
+JAVAPATH = $(DIR)/environment/wumpuslite/WumpusWorld/src/main/java/wumpusworld/
+COMMITPATH = $(DIR)/environment/
 
 world:
 	javac $(JAVAPATH)*.java
@@ -16,3 +17,6 @@ run: world
 
 javacp:
 	cp $(JAVAPATH)*.java $(COMMITPATH)
+
+javarm:
+	rm $(COMMITPATH)*.java
