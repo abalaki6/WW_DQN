@@ -34,8 +34,8 @@ public class NetworkConnector{
 
     /**
      * Creates all buffers for interal communication
-     * @param port: port to connect 
-     * @param number_parallel_simulators: how many parallel runs network has to expect
+     * @param port port to connect 
+     * @param number_parallel_simulators how many parallel runs network has to expect
      */
     public NetworkConnector(int port, int number_parallel_simulators){
         this.simulators = number_parallel_simulators;
@@ -59,10 +59,10 @@ public class NetworkConnector{
 
     /**
      * Update tuple (s, r, t) for specified simulator
-     * @param state: new state of the simulator
-     * @param reward: reward for previous action
-     * @param terminal: is the state terminal
-     * @param simulator_id: id of the simulator to update information
+     * @param state new state of the simulator
+     * @param reward reward for previous action
+     * @param terminal is the state terminal
+     * @param simulator_id id of the simulator to update information
      */
     public void setSRT(int state, int reward, boolean terminal, int simulator_id){
         this.SRTIntBuffer.put(simulator_id * 3, state).
@@ -72,8 +72,8 @@ public class NetworkConnector{
 
     /**
      * Block untill other side of simulator runs the model and return calculated actions
-     * @param buffer: pre-allocated buffer for actions
-     * @return int[]: array of actions
+     * @param buffer pre-allocated buffer for actions
+     * @return int[] array of actions
      */
     public int[] getActions(int[] buffer){
         try{
