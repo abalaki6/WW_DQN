@@ -5,7 +5,10 @@ DIR = $(shell pwd)
 JAVAPATH = $(DIR)/environment/wumpuslite/WumpusWorld/src/main/java/wumpusworld/
 COMMITPATH = $(DIR)/environment/
 
-world:
+JAVAFILES = $(shell ls -d -1 $(JAVAPATH)*.java*)
+CLASSFILES = $(shell ls -d -1 $(JAVAPATH)*.java* | sed -e 's/.java/.class/g') 
+
+world: $(JAVAFILES)
 	javac $(JAVAPATH)*.java
 	echo Environment compiled 
 
